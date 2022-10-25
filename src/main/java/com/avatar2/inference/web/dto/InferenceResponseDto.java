@@ -1,6 +1,7 @@
 package com.avatar2.inference.web.dto;
 
 import com.avatar2.inference.domain.inference.PElem;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,8 +14,10 @@ public class InferenceResponseDto {
     private ArrayList<PElem> coord = new ArrayList<>();
     private ArrayList<PElem> eyelash = new ArrayList<>();
     private MultipartFile iris;
+    private String err;
 
-    public InferenceResponseDto(ArrayList<PElem> coord, ArrayList<PElem> eyelash, MultipartFile iris) {
+    @Builder
+    public InferenceResponseDto(ArrayList<PElem> coord, ArrayList<PElem> eyelash, MultipartFile iris, String err) {
         this.coord = new ArrayList<>();
         for (PElem p : coord) {
             this.coord.add(new PElem(p.getId(), p.getX(), p.getY()));
@@ -24,5 +27,6 @@ public class InferenceResponseDto {
             this.eyelash.add(new PElem(p.getId(), p.getX(), p.getY()));
         }
         this.iris = iris;
+        this.err = err;
     }
 }
