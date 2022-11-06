@@ -13,11 +13,11 @@ import java.util.ArrayList;
 public class InferenceResponseDto {
     private ArrayList<PElem> coord = new ArrayList<>();
     private ArrayList<PElem> eyelash = new ArrayList<>();
-    private MultipartFile iris;
+    private byte[] iris;
     private String err;
 
     @Builder
-    public InferenceResponseDto(ArrayList<PElem> coord, ArrayList<PElem> eyelash, MultipartFile iris, String err) {
+    public InferenceResponseDto(ArrayList<PElem> coord, ArrayList<PElem> eyelash, byte[] iris, String err) {
         this.coord = new ArrayList<>();
         for (PElem p : coord) {
             this.coord.add(new PElem(p.getId(), p.getX(), p.getY()));

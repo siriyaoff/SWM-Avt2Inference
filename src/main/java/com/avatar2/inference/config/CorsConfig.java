@@ -15,7 +15,8 @@ public class CorsConfig implements WebMvcConfigurer {
                         "https://localhost:8080",
                         "http://localhost:3000",
                         "https://localhost:3000",
-                        "http://ec2-13-124-191-61.ap-northeast-2.compute.amazonaws.com:8080")
+                        "http://ec2-13-124-191-61.ap-northeast-2.compute.amazonaws.com:8080",
+                        "http://ec2-13-209-174-9.ap-northeast-2.compute.amazonaws.com:8080")
                 .allowedMethods("GET", "POST", "PUT", "DELETE");
     }
 }
