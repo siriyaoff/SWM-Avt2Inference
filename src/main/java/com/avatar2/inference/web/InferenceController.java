@@ -15,6 +15,10 @@ import org.json.simple.parser.ParseException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.commons.CommonsMultipartFile;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
+import org.springframework.web.reactive.function.client.WebClient;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,8 +28,13 @@ import java.util.concurrent.Executors;
 
 @RestController
 public class InferenceController {
+    /**
+     * inference request with reqdto
+     * @param inferenceRequestDto reqdto
+     * @return resdto
+     */
     @PostMapping("/inference")
-    public InferenceResponseDto inference(@RequestBody InferenceRequestDto inferenceRequestDto) throws IOException, InterruptedException, FileNotFoundException {
+    public InferenceResponseDto inference(@RequestBody InferenceRequestDto inferenceRequestDto) {
         InferenceResponseDto inferenceResponseDto = null;
         try {
             Path path = Paths.get("/home/ec2-user").resolve("tpsd.psd");
@@ -78,8 +87,13 @@ public class InferenceController {
         return inferenceResponseDto;
     }
 
+    /**
+     * inference request with only file psd
+     * @param psd
+     * @return
+     */
     @PostMapping("/inferencetest")
-    public InferenceResponseDto inference(@RequestPart(value = "psd") MultipartFile psd) throws IOException, InterruptedException, FileNotFoundException {
+    public InferenceResponseDto inference(@RequestPart(value = "psd") MultipartFile psd) {
         InferenceResponseDto inferenceResponseDto = null;
         try {
             Path path = Paths.get("/home/ec2-user").resolve("tpsd.psd");
@@ -132,61 +146,89 @@ public class InferenceController {
         return inferenceResponseDto;
     }
 
-    @GetMapping("/test")
-    public InferenceResponseDto test() throws IOException, InterruptedException {
+    /**
+     * parse json, png and create resdt
+     * @return resdto
+     */
+    @GetMapping("/rett")
+    public InferenceResponseDto rett() {
         InferenceResponseDto inferenceResponseDto = null;
-
-        // read psd as File, convert to multipartfile
         try {
             ArrayList<PElem> coord, eyelash;
             JSONParser parser = new JSONParser();
-            JSONObject ob, elemob;
-            JSONArray point;
-            ObjectMapper objectMapper = new ObjectMapper();
+            JSONObject jsonObject, jsonObject1;
+            JSONArray pointArray;
 
             Reader reader = new FileReader("/Users/yanghyowon/Downloads/testPoint.json");
-            ob = (JSONObject) parser.parse(reader);
-            point = (JSONArray) parser.parse(ob.get("Point").toString());
+            jsonObject = (JSONObject) parser.parse(reader);
+            pointArray = (JSONArray) parser.parse(jsonObject.get("Point").toString());
             coord = new ArrayList<>();
-            for (Object obj : point) {
-                elemob = (JSONObject) obj;
+            for (Object obj : pointArray) {
+                jsonObject1 = (JSONObject) obj;
                 coord.add(PElem.builder()
-                        .id((String) elemob.get("id"))
-                        .x((String) elemob.get("x"))
-                        .y((String) elemob.get("y"))
+                        .id((String) jsonObject1.get("id"))
+                        .x((String) jsonObject1.get("x"))
+                        .y((String) jsonObject1.get("y"))
                         .build());
             }
 
             reader = new FileReader("/Users/yanghyowon/Downloads/testEyelash.json");
-            ob = (JSONObject) parser.parse(reader);
-            point = (JSONArray) parser.parse(ob.get("Point").toString());
+            jsonObject = (JSONObject) parser.parse(reader);
+            pointArray = (JSONArray) parser.parse(jsonObject.get("Point").toString());
             eyelash = new ArrayList<>();
-            for (Object obj : point) {
-                elemob = (JSONObject) obj;
+            for (Object obj : pointArray) {
+                jsonObject1 = (JSONObject) obj;
                 eyelash.add(PElem.builder()
-                        .id((String) elemob.get("id"))
-                        .x((String) elemob.get("x"))
-                        .y((String) elemob.get("y"))
+                        .id((String) jsonObject1.get("id"))
+                        .x((String) jsonObject1.get("x"))
+                        .y((String) jsonObject1.get("y"))
                         .build());
             }
 
             File file = new File("/Users/yanghyowon/Downloads/iris.png");
-            FileItem fileItem = new DiskFileItem("originFile", Files.probeContentType(file.toPath()), false, file.getName(), (int) file.length(), file.getParentFile());
+            FileItem fileItem = new DiskFileItem("iris.png", Files.probeContentType(file.toPath()), false, file.getName(), (int) file.length(), file.getParentFile());
             InputStream input = new FileInputStream(file);
             OutputStream os = fileItem.getOutputStream();
             IOUtils.copy(input, os);
             MultipartFile iris = new CommonsMultipartFile(fileItem);
             inferenceResponseDto = new InferenceResponseDto(coord, eyelash, iris, "");
-
-            return inferenceResponseDto;
-
         } catch (Exception e) {
-            inferenceResponseDto=new InferenceResponseDto(null, null, null, e.getStackTrace()[0].toString());
-            return inferenceResponseDto;
+            String err = e.getStackTrace()[0].toString();
+            return new InferenceResponseDto(null, null, null, err);
         }
+        return inferenceResponseDto;
     }
 
-    @GetMapping("/json")
+    /**
+     * request /rett, receive resdto
+     * @return resdto.getErr()
+     */
+    @GetMapping("/rest") // request /rett
+    public String rest() {
+        String res;
+        try {
+            ExchangeStrategies exchangeStrategies = ExchangeStrategies.builder()
+                    .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(300 * 1024 * 1024))
+                    .build();
+            WebClient webClient = WebClient.builder()
+                    .exchangeStrategies(exchangeStrategies)
+                    .baseUrl("http://localhost:8080")
+                    .build();
+            InferenceResponseDto responseDto = webClient.get()
+                    .uri("/rett")
+                    .retrieve()
+                    .bodyToMono(InferenceResponseDto.class)
+                    .block();
+            System.out.println("return to rest");
+            if(responseDto==null) res = "dto is null!!!!!!!!";
+            else res = "Succeed, " + responseDto.getErr();
+        } catch (Exception e) {
+            res = e.getStackTrace()[0].toString()+"\n"+e.getMessage();
+        }
+        return res;
+    }
+
+    @GetMapping("/json") // parse json, png to resdto
     public String json() throws IOException, ParseException {
         ArrayList<PElem> coord, eyelash;
         JSONParser parser = new JSONParser();
@@ -219,6 +261,7 @@ public class InferenceController {
 
         return res;
     }
+
     public static void processBuilder() throws IOException, InterruptedException {
         String homeDir = System.getProperty("user.home");
         ProcessBuilder builder = new ProcessBuilder();
