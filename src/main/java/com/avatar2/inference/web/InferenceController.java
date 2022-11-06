@@ -28,7 +28,10 @@ import java.util.ArrayList;
 import java.util.concurrent.Executors;
 
 @RestController
-@CrossOrigin(origins="http://localhost:8080, http://localhost:3000, http://ec2-13-124-191-61.ap-northeast-2.compute.amazonaws.com:8080", allowedHeaders="*")
+@CrossOrigin(origins="http://localhost:8080, " +
+        "http://localhost:3000, " +
+        "http://ec2-13-124-191-61.ap-northeast-2.compute.amazonaws.com:8080, " +
+        "http://ec2-13-209-174-9.ap-northeast-2.compute.amazonaws.com:8080", allowedHeaders="*")
 public class InferenceController {
     /**
      * inference request with reqdto
@@ -91,8 +94,8 @@ public class InferenceController {
 
     /**
      * inference request with only file psd
-     * @param psd
-     * @return
+     * @param psd multipartfile
+     * @return resdto
      */
     @PostMapping("/inferencetest")
     public InferenceResponseDto inference(@RequestPart(value = "psd") MultipartFile psd) {
