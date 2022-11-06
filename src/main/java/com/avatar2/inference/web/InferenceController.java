@@ -2,7 +2,6 @@ package com.avatar2.inference.web;
 
 import com.avatar2.inference.domain.inference.PElem;
 import com.avatar2.inference.domain.shellrun.StreamGobbler;
-import com.avatar2.inference.web.dto.InferenceRequestDto;
 import com.avatar2.inference.web.dto.InferenceResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.fileupload.FileItem;
@@ -12,11 +11,10 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.multipart.commons.CommonsMultipartFile;
-import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -35,15 +33,15 @@ import java.util.concurrent.Executors;
 public class InferenceController {
     /**
      * inference request with reqdto
-     * @param inferenceRequestDto reqdto
+     * @param req reqdto
      * @return resdto
      */
     @PostMapping("/inference")
-    public InferenceResponseDto inference(@RequestBody InferenceRequestDto inferenceRequestDto) {
+    public InferenceResponseDto inference(MultipartHttpServletRequest req) {
         InferenceResponseDto inferenceResponseDto = null;
         try {
             Path path = Paths.get("/home/ec2-user").resolve("tpsd.psd");
-            inferenceRequestDto.getPsd().transferTo(path);
+            req.getFile("file").transferTo(path);
 
             InferenceController.processBuilder();
 
@@ -84,10 +82,15 @@ public class InferenceController {
             OutputStream os = fileItem.getOutputStream();
             IOUtils.copy(input, os);
             MultipartFile iris = new CommonsMultipartFile(fileItem);
-            inferenceResponseDto = new InferenceResponseDto(coord, eyelash, iris, "");
+            inferenceResponseDto = new InferenceResponseDto(coord, eyelash, iris.getBytes(), "");
         } catch (Exception e) {
-            String err=e.getStackTrace()[0].toString();
-            return new InferenceResponseDto(null, null, null, err);
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            pw.append("************************************");
+            e.printStackTrace(pw);
+            pw.append("************************************");
+            pw.append(e.getMessage());
+            return new InferenceResponseDto(null, null, null, sw.toString());
         }
         return inferenceResponseDto;
     }
@@ -143,7 +146,7 @@ public class InferenceController {
             OutputStream os = fileItem.getOutputStream();
             IOUtils.copy(input, os);
             MultipartFile iris = new CommonsMultipartFile(fileItem);
-            inferenceResponseDto = new InferenceResponseDto(coord, eyelash, iris, "");
+            inferenceResponseDto = new InferenceResponseDto(coord, eyelash, iris.getBytes(), "");
         } catch (Exception e) {
             String err = e.getStackTrace()[0].toString();
             return new InferenceResponseDto(null, null, null, err);
@@ -163,8 +166,11 @@ public class InferenceController {
             JSONParser parser = new JSONParser();
             JSONObject jsonObject, jsonObject1;
             JSONArray pointArray;
+            Reader reader;
+            boolean isWin = System.getProperty("os.name").toLowerCase().startsWith("windows");
 
-            Reader reader = new FileReader("/Users/yanghyowon/Downloads/testPoint.json");
+            if(isWin) reader = new FileReader("C:\\Users\\yang\\Downloads\\testPoint.json");
+            else reader = new FileReader("/Users/yanghyowon/Downloads/testPoint.json");
             jsonObject = (JSONObject) parser.parse(reader);
             pointArray = (JSONArray) parser.parse(jsonObject.get("Point").toString());
             coord = new ArrayList<>();
@@ -177,7 +183,8 @@ public class InferenceController {
                         .build());
             }
 
-            reader = new FileReader("/Users/yanghyowon/Downloads/testEyelash.json");
+            if(isWin) reader = new FileReader("C:\\Users\\yang\\Downloads\\testEyelash.json");
+            else reader = new FileReader("/Users/yanghyowon/Downloads/testEyelash.json");
             jsonObject = (JSONObject) parser.parse(reader);
             pointArray = (JSONArray) parser.parse(jsonObject.get("Point").toString());
             eyelash = new ArrayList<>();
@@ -190,13 +197,15 @@ public class InferenceController {
                         .build());
             }
 
-            File file = new File("/Users/yanghyowon/Downloads/iris.png");
-            FileItem fileItem = new DiskFileItem("iris.png", Files.probeContentType(file.toPath()), false, file.getName(), (int) file.length(), file.getParentFile());
+            File file;
+            if(isWin) file = new File("C:\\Users\\yang\\Downloads\\iris.png");
+            else file = new File("/Users/yanghyowon/Downloads/iris.png");
+            FileItem fileItem = new DiskFileItem("originFile", Files.probeContentType(file.toPath()), false, file.getName(), (int) file.length(), file.getParentFile());
             InputStream input = new FileInputStream(file);
             OutputStream os = fileItem.getOutputStream();
             IOUtils.copy(input, os);
             MultipartFile iris = new CommonsMultipartFile(fileItem);
-            inferenceResponseDto = new InferenceResponseDto(coord, eyelash, iris, "");
+            inferenceResponseDto = new InferenceResponseDto(coord, eyelash, iris.getBytes(), "");
         } catch (Exception e) {
             String err = e.getStackTrace()[0].toString();
             return new InferenceResponseDto(null, null, null, err);
@@ -228,7 +237,13 @@ public class InferenceController {
             if(responseDto==null) res = "dto is null!!!!!!!!";
             else res = "Succeed, " + responseDto.getErr();
         } catch (Exception e) {
-            res = e.getStackTrace()[0].toString()+"\n"+e.getMessage();
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            pw.append("************************************");
+            e.printStackTrace(pw);
+            pw.append("************************************");
+            pw.append(e.getMessage());
+            res = sw.toString();
         }
         return res;
     }
@@ -240,8 +255,11 @@ public class InferenceController {
         JSONObject ob, elemob;
         JSONArray point;
         ObjectMapper objectMapper = new ObjectMapper();
+        Reader reader;
+        boolean isWin = System.getProperty("os.name").toLowerCase().startsWith("windows");
 
-        Reader reader = new FileReader("/Users/yanghyowon/Downloads/testPoint.json");
+        if(isWin) reader = new FileReader("C:\\Users\\yang\\Downloads\\testPoint.json");
+        else reader = new FileReader("/Users/yanghyowon/Downloads/testPoint.json");
         ob = (JSONObject) parser.parse(reader);
         point = (JSONArray) parser.parse(ob.get("Point").toString());
         coord = new ArrayList<>();
@@ -254,13 +272,15 @@ public class InferenceController {
                     .build());
         }
 
-        File file = new File("/Users/yanghyowon/Downloads/iris.png");
+        File file;
+        if(isWin) file = new File("C:\\Users\\yang\\Downloads\\iris.png");
+        else file=new File("/Users/yanghyowon/Downloads/iris.png");
         FileItem fileItem = new DiskFileItem("originFile", Files.probeContentType(file.toPath()), false, file.getName(), (int) file.length(), file.getParentFile());
         InputStream input = new FileInputStream(file);
         OutputStream os = fileItem.getOutputStream();
         IOUtils.copy(input, os);
         MultipartFile iris = new CommonsMultipartFile(fileItem);
-        InferenceResponseDto inferenceResponseDto = new InferenceResponseDto(coord, coord, iris, "");
+        InferenceResponseDto inferenceResponseDto = new InferenceResponseDto(coord, coord, iris.getBytes(), "");
 
         String res = objectMapper.writeValueAsString(inferenceResponseDto.getCoord());
 
