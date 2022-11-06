@@ -12,6 +12,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.commons.CommonsMultipartFile;
@@ -27,6 +28,7 @@ import java.util.ArrayList;
 import java.util.concurrent.Executors;
 
 @RestController
+@CrossOrigin(origins="http://localhost:8080, http://localhost:3000, http://ec2-13-124-191-61.ap-northeast-2.compute.amazonaws.com:8080", allowedHeaders="*")
 public class InferenceController {
     /**
      * inference request with reqdto
