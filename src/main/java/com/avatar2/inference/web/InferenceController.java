@@ -49,10 +49,12 @@ public class InferenceController {
                     psd.getBytes());
 
             log+="1";
+            System.out.println("On /inference :: psd saved");
 
             InferenceController.processBuilder();
 
             log+="2";
+            System.out.println("On /inference :: execInf.sh executed");
 
             ArrayList<PElem> coord, eyelash;
             JSONParser parser = new JSONParser();
@@ -86,6 +88,7 @@ public class InferenceController {
             }
 
             log+="3";
+            System.out.println("On /inference :: json parsed");
 
             File file = new File("/home/ec2-user/iris.png");
             FileItem fileItem = new DiskFileItem("originFile", Files.probeContentType(file.toPath()), false, file.getName(), (int) file.length(), file.getParentFile());
@@ -93,7 +96,13 @@ public class InferenceController {
             OutputStream os = fileItem.getOutputStream();
             IOUtils.copy(input, os);
             MultipartFile iris = new CommonsMultipartFile(fileItem);
+
+            log+="4";
+            System.out.println("On /inference :: png parsed");
+
             inferenceResponseDto = new InferenceResponseDto(coord, eyelash, iris.getBytes(), log);
+
+            System.out.println("On /inference :: resdto created");
         } catch (Exception e) {
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
@@ -102,65 +111,6 @@ public class InferenceController {
             pw.append("************************************");
             pw.append(e.getMessage());
             return new InferenceResponseDto(null, null, null, log+sw.toString());
-        }
-        return inferenceResponseDto;
-    }
-
-    /**
-     * inference request with only file psd
-     * @param psd multipartfile
-     * @return resdto
-     */
-    @PostMapping("/inferencetest")
-    public InferenceResponseDto inference(@RequestPart(value = "psd") MultipartFile psd) {
-        InferenceResponseDto inferenceResponseDto = null;
-        try {
-            Path path = Paths.get("/home/ec2-user").resolve("tpsd.psd");
-            psd.transferTo(path);
-
-            InferenceController.processBuilder();
-
-            ArrayList<PElem> coord, eyelash;
-            JSONParser parser = new JSONParser();
-            JSONObject jsonObject, jsonObject1;
-            JSONArray pointArray;
-
-            Reader reader = new FileReader("/home/ec2-user/coord.json");
-            jsonObject = (JSONObject) parser.parse(reader);
-            pointArray = (JSONArray) parser.parse(jsonObject.get("Point").toString());
-            coord = new ArrayList<>();
-            for (Object obj : pointArray) {
-                jsonObject1 = (JSONObject) obj;
-                coord.add(PElem.builder()
-                        .id((String) jsonObject1.get("id"))
-                        .x((String) jsonObject1.get("x"))
-                        .y((String) jsonObject1.get("y"))
-                        .build());
-            }
-
-            reader = new FileReader("/home/ec2-user/eyelash.json");
-            jsonObject = (JSONObject) parser.parse(reader);
-            pointArray = (JSONArray) parser.parse(jsonObject.get("Point").toString());
-            eyelash = new ArrayList<>();
-            for (Object obj : pointArray) {
-                jsonObject1 = (JSONObject) obj;
-                eyelash.add(PElem.builder()
-                        .id((String) jsonObject1.get("id"))
-                        .x((String) jsonObject1.get("x"))
-                        .y((String) jsonObject1.get("y"))
-                        .build());
-            }
-
-            File file = new File("/home/ec2-user/iris.png");
-            FileItem fileItem = new DiskFileItem("originFile", Files.probeContentType(file.toPath()), false, file.getName(), (int) file.length(), file.getParentFile());
-            InputStream input = new FileInputStream(file);
-            OutputStream os = fileItem.getOutputStream();
-            IOUtils.copy(input, os);
-            MultipartFile iris = new CommonsMultipartFile(fileItem);
-            inferenceResponseDto = new InferenceResponseDto(coord, eyelash, iris.getBytes(), "");
-        } catch (Exception e) {
-            String err = e.getStackTrace()[0].toString();
-            return new InferenceResponseDto(null, null, null, err);
         }
         return inferenceResponseDto;
     }
