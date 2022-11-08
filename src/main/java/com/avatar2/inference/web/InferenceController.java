@@ -6,6 +6,7 @@ import com.avatar2.inference.web.dto.InferenceResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItem;
+import org.apache.commons.io.FileUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -39,11 +40,19 @@ public class InferenceController {
     @PostMapping("/inference")
     public InferenceResponseDto inference(MultipartHttpServletRequest req) {
         InferenceResponseDto inferenceResponseDto = null;
+        String log="";
         try {
-            Path path = Paths.get("/home/ec2-user").resolve("tpsd.psd");
-            req.getFile("file").transferTo(path);
+//            Path path = Paths.get("/home/ec2-user").resolve("tpsd.psd");
+//            req.getFile("file").transferTo(path);
+            MultipartFile psd = req.getFile("file");
+            FileUtils.writeByteArrayToFile(new File("/home/ec2-user/tpsd.psd"),
+                    psd.getBytes());
+
+            log+="1";
 
             InferenceController.processBuilder();
+
+            log+="2";
 
             ArrayList<PElem> coord, eyelash;
             JSONParser parser = new JSONParser();
@@ -76,13 +85,15 @@ public class InferenceController {
                         .build());
             }
 
+            log+="3";
+
             File file = new File("/home/ec2-user/iris.png");
             FileItem fileItem = new DiskFileItem("originFile", Files.probeContentType(file.toPath()), false, file.getName(), (int) file.length(), file.getParentFile());
             InputStream input = new FileInputStream(file);
             OutputStream os = fileItem.getOutputStream();
             IOUtils.copy(input, os);
             MultipartFile iris = new CommonsMultipartFile(fileItem);
-            inferenceResponseDto = new InferenceResponseDto(coord, eyelash, iris.getBytes(), "");
+            inferenceResponseDto = new InferenceResponseDto(coord, eyelash, iris.getBytes(), log);
         } catch (Exception e) {
             StringWriter sw = new StringWriter();
             PrintWriter pw = new PrintWriter(sw);
@@ -90,7 +101,7 @@ public class InferenceController {
             e.printStackTrace(pw);
             pw.append("************************************");
             pw.append(e.getMessage());
-            return new InferenceResponseDto(null, null, null, sw.toString());
+            return new InferenceResponseDto(null, null, null, log+sw.toString());
         }
         return inferenceResponseDto;
     }
